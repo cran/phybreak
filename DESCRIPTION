@@ -1,8 +1,8 @@
 Package: phybreak
 Type: Package
 Title: Analysis of Outbreaks with Sequence Data
-Version: 0.1.0
-Date: 2016-08-15
+Version: 0.1.1
+Date: 2016-08-31
 Authors@R: person("Don", "Klinkenberg", 
     email = "don@xs4all.nl", role = c("aut", "cre"))
 Description: Implementation the outbreak analysis method described by 
@@ -18,8 +18,8 @@ Suggests: coda, phytools, OutbreakTools
 LinkingTo: Rcpp
 RoxygenNote: 5.0.1
 NeedsCompilation: yes
-Packaged: 2016-08-17 10:05:00 UTC; don
+Packaged: 2016-08-31 21:33:45 UTC; Don
 Author: Don Klinkenberg [aut, cre]
 Maintainer: Don Klinkenberg <don@xs4all.nl>
 Repository: CRAN
-Date/Publication: 2016-08-17 12:23:57
+Date/Publication: 2016-09-01 01:39:46
