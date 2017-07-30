@@ -27,8 +27,7 @@
 }
 
 ### build the .pbe0 at the start of an mcmc chain by copying the fixed parameters and phybreak object, and by
-### calculating likarray and the log-likelihoods called from: burnin.phybreak sample.phybreak calls: .likseqenv ## C++ function
-### .liksampletimes .likgentimes .likcoaltimes .accept.pbe
+### calculating likarray and the log-likelihoods 
 .build.pbe <- function(phybreak.obj) {
   ### Making everything available within the function
   le <- environment()
@@ -36,7 +35,7 @@
   h <- phybreak.obj$h
   v <- phybreak.obj$v
   p <- phybreak.obj$p
-  SNP <- t(matrix(unlist(d$sequences), ncol = p$obs))
+  SNP <- t(matrix(unlist(d$sequences), ncol = d$nsamples))
   SNPfr <- attr(d$sequences, "weight")
   
   
@@ -63,27 +62,26 @@
   
   
   ### initialize all dimensions of likarray
-  likarray <- array(1, dim = c(4, length(snpfrreduced), 2 * p$obs - 1))
+  likarray <- array(1, dim = c(4, length(snpfrreduced), 2 * d$nsamples - 1))
   ### initialize likarray with observations on sampling nodes: 0 or 1
-  likarray[cbind(1, rep(1:length(snpfrreduced), p$obs), rep(1:p$obs, 
+  likarray[cbind(1, rep(1:length(snpfrreduced), d$nsamples), rep(1:d$nsamples, 
                                                             each = length(snpfrreduced)))] <- 1 * t(snpreduced == 1 | snpreduced == 5)
-  likarray[cbind(2, rep(1:length(snpfrreduced), p$obs), rep(1:p$obs, 
+  likarray[cbind(2, rep(1:length(snpfrreduced), d$nsamples), rep(1:d$nsamples, 
                                                             each = length(snpfrreduced)))] <- 1 * t(snpreduced == 2 | snpreduced == 5)
-  likarray[cbind(3, rep(1:length(snpfrreduced), p$obs), rep(1:p$obs, 
+  likarray[cbind(3, rep(1:length(snpfrreduced), d$nsamples), rep(1:d$nsamples, 
                                                             each = length(snpfrreduced)))] <- 1 * t(snpreduced == 3 | snpreduced == 5)
-  likarray[cbind(4, rep(1:length(snpfrreduced), p$obs), rep(1:p$obs, 
+  likarray[cbind(4, rep(1:length(snpfrreduced), d$nsamples), rep(1:d$nsamples, 
                                                             each = length(snpfrreduced)))] <- 1 * t(snpreduced == 4 | snpreduced == 5)
   
   
   ### complete likarray and calculate log-likelihood of sequences
-  .likseqenv(le, (p$obs + 1):(2 * p$obs - 1), 1:p$obs)
+  .likseqenv(le, (d$nsamples + 1):(2 * d$nsamples - 1), 1:d$nsamples)
   
   
   
   ### calculate the other log-likelihoods
-  logLiksam <- .lik.sampletimes(p$shape.sample, p$mean.sample, v$nodetimes, v$nodetypes)
-  logLikgen <- .lik.gentimes(p$obs, p$shape.gen, p$mean.gen, v$nodetimes, v$nodehosts, 
-                             v$nodetypes)
+  logLiksam <- .lik.sampletimes(p$obs, d$nsamples, p$shape.sample, p$mean.sample, v$nodetimes)
+  logLikgen <- .lik.gentimes(p$obs, d$nsamples, p$shape.gen, p$mean.gen, v$nodetimes, v$nodehosts)
   logLikcoal <- .lik.coaltimes(p$obs, p$wh.model, p$wh.slope, v$nodetimes, v$nodehosts, 
                                v$nodetypes)
   
@@ -102,7 +100,7 @@
 
 
 ### take the elements d, v, p, and h from .pbe0, and s from the function arguments, and make a new phybreak-object. Then
-### empty the environments and return the new object.  called from: burnin.phybreak sample.phybreak
+### empty the environments and return the new object.  
 .destroy.pbe <- function(phybreak.obj.samples) {
   res <- list(d = .pbe0$d, v = .pbe0$v, p = .pbe0$p, h = .pbe0$h, s = phybreak.obj.samples)
   class(res) <- c("phybreak", "list")
@@ -112,39 +110,39 @@
 }
 
 
-### copy the elements from .pbe0 into .pbe1 to prepare for a proposal called from: .updatehost .update.mu,
-### .update.mS, .update.mG, .update.wh
+### copy the elements from .pbe0 into .pbe1 to prepare for a proposal
 .prepare.pbe <- function() {
   .copy2pbe1("d", .pbe0)
   .copy2pbe1("v", .pbe0)
   .copy2pbe1("p", .pbe0)
   .pbe1$likarray <- .pbe0$likarray + 0  #make a true copy, not a pointer
   .copy2pbe1("likarrayfreq", .pbe0)
+  .pbe1$logLikseq <- .pbe0$logLikseq + 0 #make a true copy, not a pointer
 }
 
 
 ### calculate the new log-likelihoods where necessary and adjust likarray. Argument f indicates which type of function it is
-### called from called from: .updatepathA - .updatepathJ .update.mu, .update.mS, .update.mG, .update.wh calls: .likseqenv ##
-### C++ function .liksampletimes .likgentimes .likcoaltimes
+### called from 
 .propose.pbe <- function(f) {
   ### Making variables and parameters available within the function
   le <- environment()
+  d <- .pbe0$d
   v <- .pbe1$v
   p <- .pbe1$p
   
-  if (f == "phylotrans") {
+  if (f == "phylotrans" || f == "topology") {
     # identify changed nodes
     chnodes <- which((v$nodeparents != .pbe0$v$nodeparents) | (v$nodetimes != 
                                                                  .pbe0$v$nodetimes))
     chnodes <- unique(unlist(sapply(chnodes, .ptr, pars = v$nodeparents)))
-    chnodes <- chnodes[chnodes > p$obs & chnodes < 2 * p$obs]
+    chnodes <- chnodes[chnodes > d$nsamples & chnodes < 2 * d$nsamples]
     # identify nodetips
-    nodetips <- c(match(chnodes, v$nodeparents), 3 * p$obs - match(chnodes, rev(v$nodeparents)))
-    nodetips[nodetips >= 2 * p$obs] <- match(nodetips[nodetips >= 2 * p$obs], v$nodeparents)
+    nodetips <- c(match(chnodes, v$nodeparents), 2 * d$nsamples + p$obs - match(chnodes, rev(v$nodeparents)))
+    nodetips[nodetips >= 2 * d$nsamples] <- match(nodetips[nodetips >= 2 * d$nsamples], v$nodeparents)
     nodetips <- nodetips[is.na(match(nodetips, chnodes))]
   } else if (f == "mu") {
-    chnodes <- (p$obs + 1):(2 * p$obs - 1)
-    nodetips <- 1:p$obs
+    chnodes <- (d$nsamples + 1):(2 * d$nsamples - 1)
+    nodetips <- 1:d$nsamples
   } else {
     chnodes <- NULL
   }
@@ -156,12 +154,12 @@
   
   
   if (f == "phylotrans" || f == "trans" || f == "mG") {
-    logLikgen <- .lik.gentimes(p$obs, p$shape.gen, p$mean.gen, v$nodetimes, v$nodehosts, v$nodetypes)
+    logLikgen <- .lik.gentimes(p$obs, d$nsamples, p$shape.gen, p$mean.gen, v$nodetimes, v$nodehosts)
     .copy2pbe1("logLikgen", le)
   }
   
   if (f == "phylotrans" || f == "trans" || f == "mS") {
-    logLiksam <- .lik.sampletimes(p$shape.sample, p$mean.sample, v$nodetimes, v$nodetypes)
+    logLiksam <- .lik.sampletimes(p$obs, d$nsamples, p$shape.sample, p$mean.sample, v$nodetimes)
     .copy2pbe1("logLiksam", le)
   }
   
@@ -173,13 +171,12 @@
 }
 
 
-### copy the elements from .pbe1 into .pbe0 upon acceptance of a proposal called from: .updatepathA -
-### .updatepathJ .update.mu, .update.mS, .update.mG, .update.wh
+### copy the elements from .pbe1 into .pbe0 upon acceptance of a proposal 
 .accept.pbe <- function(f) {
   .copy2pbe0("v", .pbe1)
   .copy2pbe0("p", .pbe1)
   
-  if(f == "phylotrans" || f == "mu") {
+  if(f == "phylotrans" || f == "topology" || f == "mu") {
     .copy2pbe0("likarray", .pbe1)
     .copy2pbe0("logLikseq", .pbe1)
   }

@@ -20,7 +20,9 @@
 #'   or as a \code{"count"} of posterior trees in which that transmission link or transmission cluster is present.
 #' @return A named list with \code{data.frame}s, each with a vector of infectors and a vector of supports.
 #' @author Don Klinkenberg \email{don@@xs4all.nl}
-#' @references \href{http://dx.doi.org/10.1101/069195}{Klinkenberg et al, on biorXiv}.
+#' @references \href{http://dx.doi.org/10.1371/journal.pcbi.1005495}{Klinkenberg et al. (2017)} Simultaneous 
+#'   inference of phylogenetic and transmission trees in infectious disease outbreaks. 
+#'   \emph{PLoS Comput Biol}, \strong{13}(5): e1005495.
 #' @examples 
 #' #First build a phybreak-object containing samples.
 #' simulation <- sim.phybreak(obsize = 5)
@@ -56,7 +58,7 @@ infectorsets <- function(phybreak.object, which.hosts = "all", percentile = 0.95
       which.hosts <- 1:obs
     } else if (!all(which.hosts %in% phybreak.object$d$names)) {
       stop("'which.hosts' contains non-existing host names'")
-    } else which.hosts <- match(which.hosts, phybreak.object$d$names)
+    } else which.hosts <- match(which.hosts, phybreak.object$d$hostnames)
     if (percentile < 0 | percentile > 1) {
       stop("'percentile' should be given as number between 0 and 1")
     }
@@ -102,7 +104,7 @@ infectorsets <- function(phybreak.object, which.hosts = "all", percentile = 0.95
                 ]]/denominator)))
         }
     }
-    names(res) <- phybreak.object$d$names[which.hosts]
+    names(res) <- phybreak.object$d$hostnames[which.hosts]
     
     ### return the result
     return(res)

@@ -4,8 +4,8 @@
 \alias{plot.phybreak}
 \title{Plotting a phybreak object.}
 \usage{
-\method{plot}{phybreak}(x, plot.which = c("sample", "mpc", "mtcc", "mcc"),
-  samplenr = 0, ...)
+\method{plot}{phybreak}(x, plot.which = c("sample", "edmonds", "mpc", "mtcc",
+  "mcc"), samplenr = 0, ...)
 }
 \arguments{
 \item{x}{An object of class \code{phybreak}.}
@@ -17,11 +17,13 @@ to plot the maximum clade credibility tree (see \code{\link{phylotree}}).}
 \item{samplenr}{If \code{plot.which = "sample"}, this indicates which posterior tree should be plotted: 
 \code{samplenr = 0} to plot the current state.}
 
-\item{...}{Additional options for \code{\link[phytools]{plotSimmap}}.}
+\item{...}{Some methods for this generic require additional arguments. None are used in this method.}
 }
 \description{
-Plots a \code{phybreak}-object as phylogenetic tree with coloured branches indicating hosts. The default 
-  is to plot the current state, but any posterior sample can be chosen, as well as various consensus trees.
+Plots a \code{phybreak}-object twice: (1) as transmission tree and (2) as phylogenetic tree, using the default graphical parameters
+  of \code{\link{plotTrans}} and \code{\link{plotPhylo}}. The default 
+  is to plot the current state, but any posterior sample can be chosen, as well as various consensus trees. Consensus tree "edmonds"
+  plots only a transmission tree, consensus tree "mcc" only a phylogenetic tree.
 }
 \examples{
 #First build a phybreak-object containing samples.
@@ -32,10 +34,11 @@ MCMCstate <- sample.phybreak(MCMCstate, nsample = 50, thin = 2)
 
 plot(MCMCstate, plot.which = "mpc")
 }
+\references{
+\href{http://dx.doi.org/10.1371/journal.pcbi.1005495}{Klinkenberg et al. (2017)} Simultaneous 
+  inference of phylogenetic and transmission trees in infectious disease outbreaks. 
+  \emph{PLoS Comput Biol}, \strong{13}(5): e1005495.
+}
 \author{
 Don Klinkenberg \email{don@xs4all.nl}
 }
-\references{
-\href{http://dx.doi.org/10.1101/069195}{Klinkenberg et al, on biorXiv}.
-}
-

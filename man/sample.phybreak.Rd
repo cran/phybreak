@@ -4,7 +4,8 @@
 \alias{sample.phybreak}
 \title{Sampling from a phybreak MCMC-chain.}
 \usage{
-sample.phybreak(phybreak.object, nsample, thin, keepphylo = 0.2)
+sample.phybreak(phybreak.object, nsample, thin = 1, keepphylo = NULL,
+  phylotopology_only = 0)
 }
 \arguments{
 \item{phybreak.object}{An object of class \code{phybreak}.}
@@ -14,7 +15,11 @@ sample.phybreak(phybreak.object, nsample, thin, keepphylo = 0.2)
 \item{thin}{The thinning to use (values after every \code{thin}'th iteration will be included in the posterior). 
 Each iteration does one update of all parameters and tree updates with each host as focal host once.}
 
-\item{keepphylo}{The proportion of transmission tree updates keeping the phylotree intact.}
+\item{keepphylo}{The proportion of tree updates keeping the phylotree intact. If there is more than one
+sample per host, keepphylo should be 0. If set to NULL (default), this is done automatically, otherwise it is set to 0.2.}
+
+\item{phylotopology_only}{The proportion of tree updates in which only the within-host minitree topology is sampled, and 
+the transmission tree as well as coalescence times are kept unchanged.}
 }
 \value{
 The \code{phybreak}-object used to call the function, including (additional) samples from the posterior.
@@ -26,15 +31,16 @@ Function to take (additional) samples from the posterior distribution of a phylo
 \examples{
 #First create a phybreak-object
 simulation <- sim.phybreak(obsize = 5)
-MCMCstate <- phybreak(data = simulation$sequences, times = simulation$sample.times)
+MCMCstate <- phybreak(data = simulation)
 
 MCMCstate <- burnin.phybreak(MCMCstate, ncycles = 20)
 MCMCstate <- sample.phybreak(MCMCstate, nsample = 50, thin = 2)
 }
+\references{
+\href{http://dx.doi.org/10.1371/journal.pcbi.1005495}{Klinkenberg et al. (2017)} Simultaneous 
+  inference of phylogenetic and transmission trees in infectious disease outbreaks. 
+  \emph{PLoS Comput Biol}, \strong{13}(5): e1005495.
+}
 \author{
 Don Klinkenberg \email{don@xs4all.nl}
 }
-\references{
-\href{http://dx.doi.org/10.1101/069195}{Klinkenberg et al, on biorXiv}.
-}
-

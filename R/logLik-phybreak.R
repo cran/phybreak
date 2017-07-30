@@ -1,6 +1,5 @@
 ### calculate the log-likelihood ###
 
-### phybreak functions called ### .likseq ##C++ .lik.gentimes .lik.sampletimes .lik.coaltimes
 
 
 #' Log-likelihood of a phybreak-object.
@@ -21,11 +20,13 @@
 #' @param ... Some methods for this generic require additional arguments. None are used in this method.
 #' @return The log-likelihood as an object of class logLik.
 #' @author Don Klinkenberg \email{don@@xs4all.nl}
-#' @references \href{http://dx.doi.org/10.1101/069195}{Klinkenberg et al, on biorXiv}.
+#' @references \href{http://dx.doi.org/10.1371/journal.pcbi.1005495}{Klinkenberg et al. (2017)} Simultaneous 
+#'   inference of phylogenetic and transmission trees in infectious disease outbreaks. 
+#'   \emph{PLoS Comput Biol}, \strong{13}(5): e1005495.
 #' @examples 
 #' #First build a phybreak-object containing samples.
 #' simulation <- sim.phybreak(obsize = 5)
-#' MCMCstate <- phybreak(data = simulation$sequences, times = simulation$sample.times)
+#' MCMCstate <- phybreak(data = simulation)
 #' logLik(MCMCstate)
 #' 
 #' MCMCstate <- burnin.phybreak(MCMCstate, ncycles = 20)
@@ -40,15 +41,15 @@
 logLik.phybreak <- function(object, genetic = TRUE, withinhost = TRUE, sampling = TRUE, generation = TRUE, ...) {
     res <- 0
     if (genetic) {
-        res <- res + with(object, .likseq(matrix(unlist(d$sequences), ncol = p$obs), 
+        res <- res + with(object, .likseq(matrix(unlist(d$sequences), ncol = d$nsamples), 
                                           attr(d$sequences, "weight"), 
-                                          v$nodeparents, v$nodetimes, p$mu, p$obs))
+                                          v$nodeparents, v$nodetimes, p$mu, d$nsamples))
     }
     if (generation) {
-        res <- res + with(object, .lik.gentimes(p$obs, p$shape.gen, p$mean.gen, v$nodetimes, v$nodehosts, v$nodetypes))
+        res <- res + with(object, .lik.gentimes(p$obs, d$nsamples, p$shape.gen, p$mean.gen, v$nodetimes, v$nodehosts))
     }
     if (sampling) {
-        res <- res + with(object, .lik.sampletimes(p$shape.sample, p$mean.sample, v$nodetimes, v$nodetypes))
+        res <- res + with(object, .lik.sampletimes(p$obs, d$nsamples, p$shape.sample, p$mean.sample, v$nodetimes))
     }
     if (withinhost) {
         res <- res + with(object, .lik.coaltimes(p$obs, p$wh.model, p$wh.slope, v$nodetimes, v$nodehosts, v$nodetypes))
@@ -63,18 +64,21 @@ logLik.phybreak <- function(object, genetic = TRUE, withinhost = TRUE, sampling 
 }
 
 
-### calculate the log-likelihood of sampling intervals called from: logLik.phybreak .build.phybreakenv .propose.phybreakenv
-.lik.gentimes <- function(obs, shapeG, meanG, nodetimes, nodehosts, nodetypes) {
-    sum(dgamma(nodetimes[nodetypes == "t" & nodehosts > 0] - nodetimes[nodehosts[nodetypes == "t" & nodehosts > 0] + 2 * obs - 
-        1], shape = shapeG, scale = meanG/shapeG, log = TRUE))
+### calculate the log-likelihood of sampling intervals 
+.lik.gentimes <- function(obs, nsamples, shapeG, meanG, nodetimes, nodehosts) {
+  nt <- nodetimes[2 * nsamples - 1 + 1:obs]
+  nh <- nodehosts[2 * nsamples - 1 + 1:obs]
+    sum(dgamma(nt[nh > 0] - 
+                 nt[nh[nh > 0]], 
+               shape = shapeG, scale = meanG/shapeG, log = TRUE))
 }
 
-### calculate the log-likelihood of generation intervals called from: logLik.phybreak .build.phybreakenv .propose.phybreakenv
-.lik.sampletimes <- function(shapeS, meanS, nodetimes, nodetypes) {
-    sum(dgamma(nodetimes[nodetypes == "s"] - nodetimes[nodetypes == "t"], shape = shapeS, scale = meanS/shapeS, log = TRUE))
+### calculate the log-likelihood of generation intervals 
+.lik.sampletimes <- function(obs, nsamples, shapeS, meanS, nodetimes) {
+    sum(dgamma(nodetimes[1:obs] - nodetimes[2 * nsamples - 1 + 1:obs], shape = shapeS, scale = meanS/shapeS, log = TRUE))
 }
 
-### calculate the log-likelihood of coalescent intervals called from: logLik.phybreak .build.phybreakenv .propose.phybreakenv
+### calculate the log-likelihood of coalescent intervals 
 .lik.coaltimes <- function(obs, wh.model, slope, nodetimes, nodehosts, nodetypes) {
     if (wh.model == 1 || wh.model == 2) 
         return(0)

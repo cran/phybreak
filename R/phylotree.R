@@ -16,7 +16,9 @@
 #' @return A \code{data.frame} with per item (=node) its parent and support per clade, and optionally summary node times. 
 #'   The first n nodes are the samples, the last n-1 nodes are the internal nodes.
 #' @author Don Klinkenberg \email{don@@xs4all.nl}
-#' @references \href{http://dx.doi.org/10.1101/069195}{Klinkenberg et al, on biorXiv}.
+#' @references \href{http://dx.doi.org/10.1371/journal.pcbi.1005495}{Klinkenberg et al. (2017)} Simultaneous 
+#'   inference of phylogenetic and transmission trees in infectious disease outbreaks. 
+#'   \emph{PLoS Comput Biol}, \strong{13}(5): e1005495.
 #' @examples 
 #' #First build a phybreak-object containing samples.
 #' simulation <- sim.phybreak(obsize = 5)
@@ -42,15 +44,16 @@ phylotree <- function(phybreak.object, samplesize = Inf, support = c("proportion
 
     ### initialization
     samplesize <- min(samplesize, chainlength)
+    nsamples <- phybreak.object$d$nsamples
     obs <- phybreak.object$p$obs
     res <- c()
     
     ### decision tree to use correct model
     # if(method[1] == 'mcc') {
-    res <- .mcctree(.makephyloparsets(phybreak.object$s$nodeparents[, (1:samplesize) + chainlength - samplesize]), phybreak.object$s$nodetimes[1:(obs - 
-        1), (1:samplesize) + chainlength - samplesize], c(obs, samplesize))
+    res <- .mcctree(.makephyloparsets(phybreak.object$s$nodeparents[, (1:samplesize) + chainlength - samplesize], nsamples), 
+                    phybreak.object$s$nodetimes[1:(nsamples - 1), (1:samplesize) + chainlength - samplesize], c(nsamples, samplesize))
     if (phylo.class) 
-        return(get.phylo(phybreak.object, tail(res, 1) + chainlength - samplesize, TRUE))
+        return(get.phylo(phybreak.object, samplenr = tail(res, 1) + chainlength - samplesize, simmap = TRUE))
     res <- matrix(head(res, -1), ncol = 5)
     # } if(method[1] == 'cc.construct') { res <- matrix(.CCphylotreeconstruct( .makephyloparsets(phybreak.object$s$nodeparents[,
     # (1:samplesize) + chainlength - samplesize]), phybreak.object$s$nodetimes[1:(obs - 1), (1:samplesize) + chainlength -
@@ -58,14 +61,14 @@ phylotree <- function(phybreak.object, samplesize = Inf, support = c("proportion
     # stop('incorrect method provided, choose \'mcc\' or \'cc.construct\'') }
     
     ### make node obs+1 the root node
-    if(res[obs + 1, 1] != 0) {
+    if(res[nsamples + 1, 1] != 0) {
       curroot <- which(res[, 1] == 0)
       rootstats <- res[curroot, ]
-      res[curroot, ] <- res[obs + 1, ]
-      res[obs + 1, ] <- rootstats
+      res[curroot, ] <- res[nsamples + 1, ]
+      res[nsamples + 1, ] <- rootstats
       
-      res[res[, 1] == obs + 1, 1] <- -1
-      res[res[, 1] == curroot, 1] <- obs + 1
+      res[res[, 1] == nsamples + 1, 1] <- -1
+      res[res[, 1] == curroot, 1] <- nsamples + 1
       res[res[, 1] == -1, 1] <- curroot
     }
     
@@ -77,10 +80,10 @@ phylotree <- function(phybreak.object, samplesize = Inf, support = c("proportion
     }
     
     # times
-    res[1:obs, 3] <- phybreak.object$v$nodetimes[1:obs]
-    res[1:obs, 5] <- phybreak.object$v$nodetimes[1:obs]
+    res[1:nsamples, 3] <- phybreak.object$v$nodetimes[1:nsamples]
+    res[1:nsamples, 5] <- phybreak.object$v$nodetimes[1:nsamples]
     
-    parents.out <- matrix(res[, 1], ncol = 1, dimnames = list(1:(2 * obs - 1), "parent"))
+    parents.out <- matrix(res[, 1], ncol = 1, dimnames = list(1:(2 * nsamples - 1), "parent"))
     # if(method[1] == 'mcc') {
     return(data.frame(parents = parents.out, support = support.out, node.times.mean = res[, 3], node.times.sd = res[, 4], node.times.mc.tree = res[, 
         5]))
@@ -91,17 +94,16 @@ phylotree <- function(phybreak.object, samplesize = Inf, support = c("proportion
 
 
 ### function to remove the transmission nodes from a matrix with nodeparents-sets called by: .phylotree calls: .makephyloparset
-.makephyloparsets <- function(nodeparentsets) {
-    apply(nodeparentsets, MARGIN = 2, .makephyloparset)
+.makephyloparsets <- function(nodeparentsets, nsamples) {
+    apply(nodeparentsets, MARGIN = 2, .makephyloparset, nsamples = nsamples)
 }
 
 ### function to remove the transmission nodes from a nodeparents-set of a phybreak-object called by: .makephyloparsets
-.makephyloparset <- function(parentset) {
-    obs <- (1 + length(parentset))/3
+.makephyloparset <- function(parentset, nsamples) {
     res <- parentset
-    while (max(res) >= 2 * obs) {
-        res[res >= 2 * obs] <- parentset[res][res >= 2 * obs]
+    while (max(res) >= 2 * nsamples) {
+        res[res >= 2 * nsamples] <- parentset[res][res >= 2 * nsamples]
     }
-    return(res[1:(2 * obs - 1)])
+    return(res[1:(2 * nsamples - 1)])
 }
 
